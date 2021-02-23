@@ -25,7 +25,8 @@ class SocketInDns(Protocol):
         if TESTING:
             self.resolver = client.Resolver(servers=[('127.0.0.1', 5553)])
         else:
-            self.resolver = client.Resolver('/etc/resolv.conf')
+            # self.resolver = client.Resolver('/etc/resolv.conf')
+            self.resolver = client.Resolver(servers=[('8.8.8.8', 53)])
 
         # data going out
         self.score_board = bromine.Scoreboard()
