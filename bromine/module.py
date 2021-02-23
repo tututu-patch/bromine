@@ -6,7 +6,7 @@ import os
 import random
 import struct
 
-config_path = os.path.expanduser('~/.config/bromine/config.ini')
+config_path = os.path.expanduser('config.ini')
 parsed = configparser.ConfigParser()
 parsed.read(config_path)
 
@@ -30,6 +30,8 @@ NAME_MAX = 253
 SUB_NAME_MAX = 63
 FORBIDDEN_FIRST = b"-"[0]
 
+def to_bytes(n, length):
+    return bytes( (n >> i*8) & 0xff for i in reversed(range(length)))
 
 def valid_dns_name(address, explain=False):
     def sub_test(sub):
@@ -91,7 +93,7 @@ def to_address(data):
     chars = list(set(b64) - set(b"-_"))
     random.shuffle(chars)  # reduce duplicate requests
     for c in chars:
-        as_byte = c.to_bytes(1, byteorder='little')
+        as_byte = to_bytes(c, 1)
         candidate = b64.replace(as_byte, b'.')
         full_address = as_byte + candidate + b'.' + tail
         if valid_dns_name(full_address):
@@ -110,7 +112,7 @@ def to_address(data):
 
 
 def from_address(address):
-    first = address[0].to_bytes(1, byteorder='little')
+    first = to_bytes(address[0], 1)
     sub = address[1:-1-len(CONFIG['domain'])]
 
     if first == b'_':
@@ -222,7 +224,7 @@ def make_ack(last_seen_remote_mid, oldest_local_mid):
     size = max_size() - OVERHEAD - 4
     # helps dedup requests, helps with to_address failure
     pad = random.getrandbits(size * 8)
-    as_bytes = pad.to_bytes(size, byteorder='little')
+    as_bytes = to_bytes(pad, size)
     return header + as_bytes + footer
 
 
@@ -255,7 +257,7 @@ class System:
         header = struct.pack("<B%dH" % n, *([chid] + mids))
         length = (self.payload.bit_length() + 7) // 8
         assert(length <= max_size())
-        payload_bytes = self.payload.to_bytes(length, byteorder='little')
+        payload_bytes = to_bytes(self.payload, length)
         return header + payload_bytes
 
     def to_address(self, chid):
@@ -265,7 +267,10 @@ class System:
 
     def from_transmission(self, transmission):
         n = CONFIG['n']
-        chid, *self.mids = struct.unpack_from("<B%dH" % n, transmission)
+        # chid, *self.mids = struct.unpack_from("<B%dH" % n, transmission)
+        tmp = struct.unpack_from("<B%dH" % n, transmission)
+        chid = tmp[0]
+        self.mids = tuple(tmp[1:])
         self.mids = tuple(x for x in self.mids if x != 0)
         self.payload = int.from_bytes(
             transmission[(2 * n + 1):], byteorder='little')
@@ -318,7 +323,7 @@ class Systems:
             self.tries = 0
             payload = self.systems[key]
             length = (payload.bit_length() + 7) // 8
-            as_bytes = payload.to_bytes(length, byteorder='little')
+            as_bytes = to_bytes(payload, length)
             type_ = get_type(as_bytes)
             # removing things for systems is done in trim()
 
