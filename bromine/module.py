@@ -30,8 +30,15 @@ NAME_MAX = 253
 SUB_NAME_MAX = 63
 FORBIDDEN_FIRST = b"-"[0]
 
+#little
 def to_bytes(n, length):
-    return bytes( (n >> i*8) & 0xff for i in reversed(range(length)))
+    return bytes( (n >> i*8) & 0xff for i in range(length))
+
+#little
+def from_bytes(n):
+    # return n.encode('hex')
+    # print(type(n))
+    return sum( int(n[i].encode('hex'),16)    << i*8 for i in range(len(n)) )
 
 def valid_dns_name(address, explain=False):
     def sub_test(sub):
@@ -247,7 +254,7 @@ class System:
 
     def mix(self, mid, data):
         self.mids.append(mid)
-        self.payload ^= int.from_bytes(data, byteorder='little')
+        self.payload ^= from_bytes(data)
         return self
 
     def to_transmission(self, chid):
@@ -272,8 +279,7 @@ class System:
         chid = tmp[0]
         self.mids = tuple(tmp[1:])
         self.mids = tuple(x for x in self.mids if x != 0)
-        self.payload = int.from_bytes(
-            transmission[(2 * n + 1):], byteorder='little')
+        self.payload = from_bytes(transmission[(2 * n + 1):])
         return self
 
 
