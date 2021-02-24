@@ -1,9 +1,7 @@
 import bromine
-import pwd
 
 from twisted.names import dns, server, client, cache
 from twisted.application import service, internet
-from twisted.internet.task import LoopingCall
 from twisted.internet import reactor
 from twisted.internet.protocol import Protocol
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
@@ -121,15 +119,9 @@ for (klass, arg) in [(internet.TCPServer, f), (internet.UDPServer, p)]:
     s = klass(PORT, arg)
     s.setServiceParent(ret)
 
-if TESTING:
-    import os
-    uid = os.getuid()
-else:
-    uid = pwd.getpwnam("nobody").pw_uid
-
-application = service.Application('dnsserver', uid, uid)
+application = service.Application('dnsserver')
 ret.setServiceParent(service.IServiceCollection(application))
 
 if __name__ == '__main__':
     import sys
-    print("Usage: sudo twistd3 -y /full/path/server.py")
+    print("Usage: sudo twistd -y /full/path/server.py")
