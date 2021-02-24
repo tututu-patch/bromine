@@ -1,5 +1,4 @@
 import base64
-import itertools
 import configparser
 import math
 import os
