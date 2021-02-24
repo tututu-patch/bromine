@@ -47,7 +47,7 @@ def from_bytes(n):
 def valid_dns_name(address):
     def sub_test(sub):
         len_ = len(sub)
-        valid_len = len_ > 0 and len_ <= SUB_NAME_MAX
+        valid_len = 0 < len_ <= SUB_NAME_MAX
         valid_first = len_ > 0 and sub[0] != FORBIDDEN_FIRST
         return valid_len and valid_first
 
@@ -167,7 +167,7 @@ def ring_distances(x, y):
     end = CONFIG['reset']
     direct = max_ - min_
     circular = end - max_ + min_
-    return (direct, circular)
+    return direct, circular
 
 
 def ring_difference(x, y):
@@ -280,9 +280,7 @@ class System:
     def from_transmission(self, transmission):
         n = CONFIG['n']
         # chid, *self.mids = struct.unpack_from("<B%dH" % n, transmission)
-        tmp = struct.unpack_from("<B%dH" % n, transmission)
-        chid = tmp[0]
-        self.mids = tuple(tmp[1:])
+        self.mids = tuple(struct.unpack_from("<B%dH" % n, transmission)[1:])
         self.mids = tuple(x for x in self.mids if x != 0)
         self.payload = from_bytes(transmission[(2 * n + 1):])
         return self
@@ -306,7 +304,7 @@ class Systems:
             for t in self.systems:
                 c = set_s.symmetric_difference(t)
                 len_c = len(c)
-                if len_c > 0 and len_c < len_s:
+                if 0 < len_c < len_s:
                     new = tuple(c)
                     if new not in self.systems:
                         payload_s = self.systems[s]
