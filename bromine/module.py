@@ -17,8 +17,8 @@ def to_int(k, v):
 
 
 CONFIG = {k: to_int(k, parsed['DEFAULT'][k]) for k in parsed['DEFAULT']}
-assert(CONFIG['window'] > CONFIG['ackperiod'])
-assert(CONFIG['n'] % 2 == 1)
+assert (CONFIG['window'] > CONFIG['ackperiod'])
+assert (CONFIG['n'] % 2 == 1)
 
 # https://en.wikipedia.org/wiki/Hostname
 # Hostnames are composed of a series of labels concatenated with dots.
@@ -29,17 +29,22 @@ NAME_MAX = 253
 SUB_NAME_MAX = 63
 FORBIDDEN_FIRST = b"-"[0]
 
-#little
+
 def to_bytes(n, length):
-    h = '%x' % n
-    s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+    if type(n) == str:
+        h = '%x' % ord(n)
+    else:
+        h = '%x' % n
+    # h = '%x' % n
+    s = ('0' * (len(h) % 2) + h).zfill(length * 2).decode('hex')
     return s[::-1]
 
-#little
+
 def from_bytes(n):
     return int(n[::-1].encode("hex"), 16)
 
-def valid_dns_name(address, explain=False):
+
+def valid_dns_name(address):
     def sub_test(sub):
         len_ = len(sub)
         valid_len = len_ > 0 and len_ <= SUB_NAME_MAX
@@ -78,12 +83,12 @@ def to_address(data):
         # for testing purposes
         return None
 
-    assert(len(data) > 0)
+    assert (len(data) > 0)
     tail = CONFIG['domain'].encode("ascii")
 
     def insert_dots(split):
         body = b'.'.join(
-            b64[e:(e+split)] for e in range(0, len(b64), split))
+            b64[e:(e + split)] for e in range(0, len(b64), split))
         full_address = b'_' + body + b'.' + tail
         if valid_dns_name(full_address):
             return full_address
@@ -119,12 +124,13 @@ def to_address(data):
 
 def from_address(address):
     first = to_bytes(address[0], 1)
-    sub = address[1:-1-len(CONFIG['domain'])]
+    sub = address[1:-1 - len(CONFIG['domain'])]
 
     if first == b'_':
         return from_b64(sub.replace(b'.', b''))
 
     return from_b64(sub.replace(b'.', first))
+
 
 # https://docs.python.org/3/library/struct.html#functions-and-exceptions
 # https://docs.python.org/3/library/stdtypes.html#int.to_bytes
@@ -253,16 +259,16 @@ class System:
 
     def mix(self, mid, data):
         self.mids.append(mid)
-        self.payload ^= from_bytes(data)
+        self.payload ^= int(from_bytes(data))
         return self
 
     def to_transmission(self, chid):
         n = CONFIG['n']
-        assert(n >= len(self.mids))
+        assert (n >= len(self.mids))
         mids = self.mids + (n - len(self.mids)) * [0]
         header = struct.pack("<B%dH" % n, *([chid] + mids))
         length = (self.payload.bit_length() + 7) // 8
-        assert(length <= max_size())
+        assert (length <= max_size())
         payload_bytes = to_bytes(self.payload, length)
         return header + payload_bytes
 
@@ -340,7 +346,7 @@ class Systems:
                 slice_ = parse_data(as_bytes)
                 self.data.append(slice_)
             else:
-                assert(not "payload is corrupt")
+                assert (not "payload is corrupt")
 
             self.updated = True
             self.last_seen_remote_mid = target_mid
@@ -353,7 +359,9 @@ class Systems:
             return
 
         now = self.oldest_remote_mid
-        def too_old(mid): return ring_compare(mid, now) <= 0
+
+        def too_old(mid):
+            return ring_compare(mid, now) <= 0
 
         to_trim = set()
         for mids in self.systems:
@@ -389,7 +397,7 @@ class Scoreboard:
 
     def allocate_mid(self):
         next_mid = ring_successor(self.mid)
-        assert(next_mid not in self.backlog)
+        assert (next_mid not in self.backlog)
         self.mid = next_mid
         return next_mid
 
@@ -404,7 +412,7 @@ class Scoreboard:
     def push_data(self, data):
         size = max_size() - OVERHEAD
         for start in range(0, len(data), size):
-            slice_ = data[start:start+size]
+            slice_ = data[start:start + size]
             mid = self.allocate_mid()
             self.backlog[mid] = make_data(slice_)
 
@@ -431,6 +439,7 @@ class Scoreboard:
             # also cleanup the history of sent composite systems,
             # see select_system
             def remove_mid(mids): return tuple(m for m in mids if m != mid)
+
             self.sent = {remove_mid(s) for s in self.sent}
 
     def mix_system(self, selection):
@@ -463,7 +472,9 @@ class Scoreboard:
         TRY_SAMPLE_FULL = 10
 
         for _ in range(TRY_INJECT_ACK):
-            def by_age(m): return ring_difference(m, oldest)
+            def by_age(m):
+                return ring_difference(m, oldest)
+
             mids = sorted(self.backlog, key=by_age)
 
             # first try sending things in first batch
@@ -482,7 +493,7 @@ class Scoreboard:
             # we failed at making a system, try stiring things up
             self.push_ack()
 
-        assert(not "cannot select a system")
+        assert (not "cannot select a system")
         return tuple()
 
     def transmit_system(self):
