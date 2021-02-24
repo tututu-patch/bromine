@@ -31,13 +31,13 @@ FORBIDDEN_FIRST = b"-"[0]
 
 #little
 def to_bytes(n, length):
-    return bytes( (n >> i*8) & 0xff for i in range(length))
+    h = '%x' % n
+    s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+    return s[::-1]
 
 #little
 def from_bytes(n):
-    # return n.encode('hex')
-    # print(type(n))
-    return sum( int(n[i].encode('hex'),16)    << i*8 for i in range(len(n)) )
+    return int(n[::-1].encode("hex"), 16)
 
 def valid_dns_name(address, explain=False):
     def sub_test(sub):
